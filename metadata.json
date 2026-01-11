@@ -1,0 +1,7 @@
+{
+  "name": "PetPlaza",
+  "description": "The premier web-based community for pet owners. Connect, share, and explore pet services.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
