@@ -98,13 +98,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess, 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const user = await loginWithGoogle();
+      // Pass the current selected role/petName in case it's a NEW user
+      const user = await loginWithGoogle(
+        role, 
+        role === UserRole.PET_OWNER ? petName : undefined, 
+        petType
+      );
+      
+      // UX Improvement: Detect if we are in "Sign Up" mode but got an "Existing" user
+      if (!isLoginView) {
+          // If created more than 30 seconds ago, it's an existing account
+          const isExisting = user.createdAt && (Date.now() - user.createdAt > 30000);
+          
+          if (isExisting) {
+             alert(`We found your existing account! 🏠\n\nLogging you in automatically as ${user.displayName}.`);
+          } else {
+             // It's actually a new user
+             alert("Welcome to the PetPlaza family! 🎉");
+          }
+      }
+      
       onLoginSuccess(user);
       onClose();
     } catch (error: any) {
       console.error("Google Login Error:", error);
       
-      // REVEAL THE REAL ERROR
       if (error.code === 'auth/unauthorized-domain') {
         alert(`ACCESS BLOCKED BY GOOGLE\n\nYou must authorize this domain:\n1. Go to Firebase Console > Authentication > Settings > Authorized Domains\n2. Add this domain: ${window.location.hostname}`);
       } else if (error.code === 'auth/popup-closed-by-user') {
@@ -130,18 +148,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess, 
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">
+          
+          {/* Moved Role Selection to TOP for Signup View */}
+          {!isLoginView && (
+             <div className="grid grid-cols-2 gap-3 mb-6">
+                <button type="button" onClick={() => setRole(UserRole.PET_OWNER)} className={`py-3 rounded-lg border-2 ${role === UserRole.PET_OWNER ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-gray-100 text-gray-600'}`}>🐶 Pet Owner</button>
+                <button type="button" onClick={() => setRole(UserRole.PET_LOVER)} className={`py-3 rounded-lg border-2 ${role === UserRole.PET_LOVER ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-gray-100 text-gray-600'}`}>❤️ Pet Lover</button>
+             </div>
+          )}
+
           <button onClick={handleGoogleLogin} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all mb-6">
             <i className="fa-brands fa-google text-red-500 text-lg"></i>
             {isLoginView ? 'Sign in with Google' : 'Sign up with Google'}
           </button>
+          
+          {!isLoginView && <div className="text-center text-xs text-gray-400 mb-6">- OR REGISTER WITH EMAIL -</div>}
+          {isLoginView && <div className="text-center text-xs text-gray-400 mb-6">- OR LOG IN WITH EMAIL -</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLoginView && (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <button type="button" onClick={() => setRole(UserRole.PET_OWNER)} className={`py-3 rounded-lg border-2 ${role === UserRole.PET_OWNER ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-gray-100 text-gray-600'}`}>🐶 Pet Owner</button>
-                  <button type="button" onClick={() => setRole(UserRole.PET_LOVER)} className={`py-3 rounded-lg border-2 ${role === UserRole.PET_LOVER ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-gray-100 text-gray-600'}`}>❤️ Pet Lover</button>
-                </div>
                 <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300" placeholder="Full Name" />
                 {role === UserRole.PET_OWNER && <input type="text" required value={petName} onChange={(e) => setPetName(e.target.value)} className="w-full px-4 py-2.5 rounded-lg border border-gray-300" placeholder="Pet Name" />}
               </>

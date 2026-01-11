@@ -1,4 +1,3 @@
-
 import { User, UserRole } from '../types';
 import { USE_MOCK_DATA, MOCK_USER } from '../constants';
 import { auth, googleProvider, db } from '../firebase';
@@ -20,7 +19,8 @@ const mapFirebaseUserToAppUser = async (firebaseUser: any, role?: UserRole): Pro
     email: firebaseUser.email || '',
     displayName: firebaseUser.displayName || 'Pet Plaza Member',
     role: role || UserRole.PET_LOVER,
-    avatarUrl: firebaseUser.photoURL || undefined
+    avatarUrl: firebaseUser.photoURL || undefined,
+    createdAt: parseInt(firebaseUser.metadata.createdAt || '0')
   };
 
   try {
@@ -34,7 +34,8 @@ const mapFirebaseUserToAppUser = async (firebaseUser: any, role?: UserRole): Pro
         displayName: userData.displayName || fallbackUser.displayName,
         role: (userData.role as UserRole) || fallbackUser.role,
         petName: userData.petName,
-        petType: userData.petType
+        petType: userData.petType,
+        createdAt: userData.createdAt || fallbackUser.createdAt
       };
     }
   } catch (error) {
@@ -57,7 +58,11 @@ export const loginWithEmail = async (email: string, password: string): Promise<U
   }
 };
 
-export const loginWithGoogle = async (): Promise<User> => {
+export const loginWithGoogle = async (
+  desiredRole?: UserRole, 
+  desiredPetName?: string, 
+  desiredPetType?: string
+): Promise<User> => {
   if (USE_MOCK_DATA) {
     return new Promise(resolve => setTimeout(() => resolve(MOCK_USER), 800));
   }
@@ -66,11 +71,15 @@ export const loginWithGoogle = async (): Promise<User> => {
     try {
       const userDocRef = doc(db, 'users', result.user.uid);
       const userDoc = await getDoc(userDocRef);
+      
+      // Only set data if NEW user
       if (!userDoc.exists()) {
         await setDoc(userDocRef, {
           email: result.user.email,
           displayName: result.user.displayName,
-          role: UserRole.PET_LOVER,
+          role: desiredRole || UserRole.PET_LOVER,
+          petName: desiredPetName || null,
+          petType: desiredPetType || null,
           createdAt: Date.now()
         });
       }
@@ -129,7 +138,8 @@ export const registerUser = async (
       displayName: name,
       role,
       petName,
-      petType
+      petType,
+      createdAt: Date.now()
     };
   } catch (error) {
     console.error("Registration Error:", error);
