@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
 import { loginWithGoogle, registerUser, loginWithEmail, resetPassword } from '../services/authService';
-import { auth } from '../firebase';
 import Logo from './Logo';
 
 interface AuthModalProps {
@@ -102,8 +101,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSuccess, 
       const user = await loginWithGoogle();
       onLoginSuccess(user);
       onClose();
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Google Login Error:", error);
+      
+      // REVEAL THE REAL ERROR
+      if (error.code === 'auth/unauthorized-domain') {
+        alert(`ACCESS BLOCKED BY GOOGLE\n\nYou must authorize this domain:\n1. Go to Firebase Console > Authentication > Settings > Authorized Domains\n2. Add this domain: ${window.location.hostname}`);
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // User closed the popup, no alert needed
+      } else {
+        alert("Google Login Failed: " + (error.message || "Unknown error"));
+      }
     } finally {
       setLoading(false);
     }
